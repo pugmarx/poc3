@@ -96,6 +96,8 @@ public class KafkaLocalReaderTopology {
         // ********************************************************************************
         // ********************* 3. Bolt that persists to Cassandra ***************
         // ********************************************************************************
+
+        // TODO introduce a column to store 'hashes' (PK)
         IRichBolt cassandraBolt = new CassandraWriterBolt(
                 async(
                         simpleQuery("INSERT INTO poc3dump (output) VALUES (?);")
@@ -106,7 +108,7 @@ public class KafkaLocalReaderTopology {
         );
 
 
-        // Tie the kafkabolt to reduce-field bolt
+        // Tie the cassandra bolt to reduce-field bolt
         topologyBuilder.setBolt("cas-writer-bolt", cassandraBolt, PARALLELISM_HINT).setNumTasks(NUM_TASK_PER_ENTITY)
                 .shuffleGrouping("reduce-fields");
 
@@ -123,9 +125,8 @@ public class KafkaLocalReaderTopology {
         bolt.setFireAndForget(true);
 
         // Tie the kafkabolt to reduce-field bolt
-        // FIXME remove this
-        //topologyBuilder.setBolt("kafka-producer-bolt", bolt, PARALLELISM_HINT).setNumTasks(NUM_TASK_PER_ENTITY)
-        //        .shuffleGrouping("reduce-fields");
+        topologyBuilder.setBolt("kafka-producer-bolt", bolt, PARALLELISM_HINT).setNumTasks(NUM_TASK_PER_ENTITY)
+                .shuffleGrouping("reduce-fields");
 
         // Submit topology to local cluster // FIXME cluster?
         final LocalCluster localCluster = new LocalCluster();
